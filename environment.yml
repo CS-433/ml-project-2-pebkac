@@ -2,9 +2,9 @@ name: ml-project-2-pebkac
 channels:
   - defaults
 dependencies:
-  - python=3.11
+  - python=3.12
+  - juliaup
+  - rdkit
+  - ipykernel
   - pytorch
-  - numpy
-  - matplotlib
-  - tqdm
-prefix: C:\Users\mandr\anaconda3\envs\ml-project-2-pebkac
+prefix: /opt/anaconda3/envs/ml-project-2-pebkac
