@@ -11,10 +11,7 @@ The scripts additionally require to install packages via pip. To install these p
 ```
 python -m pip install juliacall
 python -m pip install "qstack[all] @ git+https://github.com/lcmd-epfl/Q-stack.git"
-
-git clone https://github.com/qml2code/qml2.git
-cd qml2
-python -m pip install .
+python -m pip install "qml2 @ git+https://github.com/qml2code/qml2.git"
 ```
 
 
