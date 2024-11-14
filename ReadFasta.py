@@ -5,6 +5,12 @@ jl.seval("using DCAUtils")
 import torch
 import numpy as np
 
+"""
+Note:
+These functions use the DCAUtils Julia package because no equivalent Python package was found
+The source code of this package can be found on the following GitHub repo: https://github.com/carlobaldassi/DCAUtils.jl
+"""
+
 def ReadFasta(file_name, max_gap_fraction, theta, remove_dups=True, verbose=True):
     """
     Reads a FASTA file and computes the alignment matrix as well as the weight of each sequence in the MSA.
