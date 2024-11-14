@@ -1,6 +1,7 @@
 name: ml-project-2-pebkac
 channels:
   - defaults
+  - conda-forge
 dependencies:
   - python=3.12
   - juliaup
