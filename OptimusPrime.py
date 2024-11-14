@@ -13,6 +13,13 @@ import math
 import copy
 
 class MultiHeadAttention(nn.Module):
+    """
+    Commentaires de Jacques:
+    - Les arguments que devrait prendre cet objet sont la dimension d_k, la dimension de la représentation D, le nombre de heads num_heads, 
+    et une seed pour l'initialisation des poids du modèle
+    
+    - L'argument d_model me semble inadapté dans le contexte
+    """
     def __init__(self, d_model, num_heads):
         super(MultiHeadAttention, self).__init__()
         # Ensure that the model dimension (d_model) is divisible by the number of heads
@@ -24,6 +31,13 @@ class MultiHeadAttention(nn.Module):
         self.d_k = d_model // num_heads # Dimension of each head's key, query, and value
         
         # Linear layers for transforming inputs
+        """
+        Commentaires de Jacques:
+        - Les dimensions input et output me semblent étranges, et sont en tout cas inadaptées dans notre contexte
+        - Les poids de toutes ces matrices doivent impérativement être initialisés avec une seed pour la reproductibilité
+        - Ne pas oublier d'exprimer W_v comme une multiplication de deux matrices (D, d_k) et (d_k, D)
+        - La matrice W_o est inutile dans notre contexte
+        """
         self.W_q = nn.Linear(d_model, d_model) # Query transformation
         self.W_k = nn.Linear(d_model, d_model) # Key transformation
         self.W_v = nn.Linear(d_model, d_model) # Value transformation
@@ -41,16 +55,30 @@ class MultiHeadAttention(nn.Module):
         attn_probs = torch.softmax(attn_scores, dim=-1)
         
         # Multiply by values to obtain the final output
+        """
+        Commentaire de Jacques:
+        - Cet output est inadapté dans le contexte
+        - Devrait rendre attn_score @ X @ V @ X.T, ou X est l'input du modèle (dimension (M, D), où M est le nombre de d'éléments de la séquence)
+        """
         output = torch.matmul(attn_probs, V)
         return output
         
     def split_heads(self, x):
         # Reshape the input to have num_heads for multi-head attention
+        """
+        Commentaire de Jacques:
+        - Je pense que le code serait plus compréhensible si l'on ne met pas toutes les matrices W_q, W_k, W_v dans la même matrice
+        - Il serait peut être mieux de faire des listes ou l'on met les matrices W_q, W_k, W_v séparément (ce sera plus compréhensible)
+        """
         batch_size, seq_length, d_model = x.size()
         return x.view(batch_size, seq_length, self.num_heads, self.d_k).transpose(1, 2)
         
     def combine_heads(self, x):
         # Combine the multiple heads back to original shape
+        """
+        Commentaire de Jacques:
+        - Inadapté dans le contexte
+        """
         batch_size, _, seq_length, d_k = x.size()
         return x.transpose(1, 2).contiguous().view(batch_size, seq_length, self.d_model)
         
@@ -64,5 +92,9 @@ class MultiHeadAttention(nn.Module):
         attn_output = self.scaled_dot_product_attention(Q, K, V, mask)
         
         # Combine heads and apply output transformation
+        """
+        Commentaire de Jacques:
+        - Inadapté dans le contexte
+        """
         output = self.W_o(self.combine_heads(attn_output))
         return output
