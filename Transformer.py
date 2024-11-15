@@ -20,15 +20,20 @@ class MultiHeadAttention(nn.Module):
     
     - L'argument d_model me semble inadapté dans le contexte
     """
-    def __init__(self, d_model, num_heads):
+    def __init__(self, L, d, q, num_heads, seed=1):
+        """Constructor for the attention model. 
+        parameters :
+        L : int,sequence length
+        d : int, the dimension of the representation
+        q : int, the number of categories
+         """
+
         super(MultiHeadAttention, self).__init__()
-        # Ensure that the model dimension (d_model) is divisible by the number of heads
-        assert d_model % num_heads == 0, "d_model must be divisible by num_heads"
         
         # Initialize dimensions
-        self.d_model = d_model # Model's dimension
+        self.d = d # Model's dimension
         self.num_heads = num_heads # Number of attention heads
-        self.d_k = d_model // num_heads # Dimension of each head's key, query, and value
+        self.L = L # Dimension of each head's key, query, and value
         
         # Linear layers for transforming inputs
         """
@@ -38,14 +43,32 @@ class MultiHeadAttention(nn.Module):
         - Ne pas oublier d'exprimer W_v comme une multiplication de deux matrices (D, d_k) et (d_k, D)
         - La matrice W_o est inutile dans notre contexte
         """
-        self.W_q = nn.Linear(d_model, d_model) # Query transformation
-        self.W_k = nn.Linear(d_model, d_model) # Key transformation
-        self.W_v = nn.Linear(d_model, d_model) # Value transformation
-        self.W_o = nn.Linear(d_model, d_model) # Output transformation
+        torch.manual_seed(seed)
+        #Q = embedding@W_q dim(embedding[i]) = (1, d) L embedding => dim Q = (L, d) selon le cours 
+        self.W_q = [nn.Parameter(d, d) for i in range(num_heads)] # Query transformation
+
+        #K = embedding@W_k => dim K = (L, d)
+        self.W_k = [nn.Parameter(d, d) for i in range(num_heads)] # Key transformation
+
+        #V = embedding@W_v => (q,q) selon l'article. Selon le cours dim V = (L, Dv)
+        #W_v = W_v_up@W_v_down
+        self.W_v_up = [nn.Parameter(d, q) for i in range(num_heads)]
+        self.W_v_down = [nn.Parameter(q,d) for i in range(num_heads)] # Value transformation
         
-    def scaled_dot_product_attention(self, Q, K, V, mask=None):
+        
+    def scaled_dot_product_attention(self, X, Q, K, V, mask=None):
+        """calculate the attention score and adds it to the original sample. Q, K, v can be obtained by X@W_
+        parameters :
+        X : tensor, 
+        samples
+        Q : tensor, 
+        query matrix
+        K : tensor, 
+        Key matrix
+        V : tensor, 
+        Value Matrix"""
         # Calculate attention scores
-        attn_scores = torch.matmul(Q, K.transpose(-2, -1)) / math.sqrt(self.d_k)
+        attn_scores = torch.matmul(Q, K.transpose(-2, -1)) / math.sqrt(self.d)
         
         # Apply mask if provided (useful for preventing attention to certain parts like padding)
         if mask is not None:
@@ -58,43 +81,18 @@ class MultiHeadAttention(nn.Module):
         """
         Commentaire de Jacques:
         - Cet output est inadapté dans le contexte
-        - Devrait rendre attn_score @ X @ V @ X.T, ou X est l'input du modèle (dimension (M, D), où M est le nombre de d'éléments de la séquence)
+        - Devrait rendre attn_score @ X @ V @ X.T, ou X est l'input du modèle (dimension (L, d), où L est le nombre de d'éléments de la séquence)
         """
-        output = torch.matmul(attn_probs, V)
+        output = torch.matmul(attn_probs, V) @ X @ V @ X.T
         return output
         
-    def split_heads(self, x):
-        # Reshape the input to have num_heads for multi-head attention
-        """
-        Commentaire de Jacques:
-        - Je pense que le code serait plus compréhensible si l'on ne met pas toutes les matrices W_q, W_k, W_v dans la même matrice
-        - Il serait peut être mieux de faire des listes ou l'on met les matrices W_q, W_k, W_v séparément (ce sera plus compréhensible)
-        """
-        batch_size, seq_length, d_model = x.size()
-        return x.view(batch_size, seq_length, self.num_heads, self.d_k).transpose(1, 2)
-        
-    def combine_heads(self, x):
-        # Combine the multiple heads back to original shape
-        """
-        Commentaire de Jacques:
-        - Inadapté dans le contexte
-        """
-        batch_size, _, seq_length, d_k = x.size()
-        return x.transpose(1, 2).contiguous().view(batch_size, seq_length, self.d_model)
-        
-    def forward(self, Q, K, V, mask=None):
-        # Apply linear transformations and split heads
-        Q = self.split_heads(self.W_q(Q))
-        K = self.split_heads(self.W_k(K))
-        V = self.split_heads(self.W_v(V))
+    def forward(self, X,mask=None):
+        """computes the attention output for a model and a sample"""
+        Q = [torch.matmul(X, self.W_q[i]) for i in range(self.num_heads)]
+        K = [torch.matmul(X, self.W_k[i]) for i in range(self.num_heads)]
+        V = [torch.matmul(torch.matmul(X, self.W_v_up[i]), self.W_v_down) for i in range(self.num_heads)]
         
         # Perform scaled dot-product attention
         attn_output = self.scaled_dot_product_attention(Q, K, V, mask)
         
-        # Combine heads and apply output transformation
-        """
-        Commentaire de Jacques:
-        - Inadapté dans le contexte
-        """
-        output = self.W_o(self.combine_heads(attn_output))
-        return output
+        return attn_output
