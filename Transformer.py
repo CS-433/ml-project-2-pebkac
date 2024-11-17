@@ -83,15 +83,3 @@ class AttentionDCA(nn.Module):
         J = J.sum(dim=0)  # Sum over heads
 
         return J
-
-# Example usage
-seq_length = 100
-num_heads = 4 
-d_k = 32
-batch_size = 64
-
-# Create random data (replace with your actual MSA data)
-data = torch.randint(0, 21, (batch_size, seq_length))
-
-model = AttentionDCA(seq_length, num_heads, d_k)
-model.train(data)
