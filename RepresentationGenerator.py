@@ -1,8 +1,11 @@
 import os
 import numpy as np
 import qml2
+import matplotlib.pyplot as plt
+import glob
 from qml2.representations.slatm import get_slatm_mbtypes, generate_slatm
-from rdkit.Chem.rdmolfiles import MolFromXYZFile
+from qml2.representations.cMBDF import generate_cmbdf, get_asize, get_convolutions
+from rdkit.Chem import MolFromSmiles, AddHs
 from rdkit.Chem import rdFingerprintGenerator
 from qstack import compound, spahm
 from tqdm import tqdm
@@ -15,14 +18,39 @@ RDLogger.EnableLog('rdApp.error')
 class RepresentationGenerator:
     """
     This object serves to generate a given representation for a set of molecules
-    To generate a given representation, initialize a RepresentationGenerator object (argument: "onehot", "SLATM", "SPAHM", or "Morgan"), representation that is going to be generated)
+    To generate a given representation, initialize a RepresentationGenerator object (argument: "onehot", "cMBDF", "SLATM", "SPAHM", or "Morgan"), representation that is going to be generated)
     A directory where the .xyz files are stored
     In any case, the generation of a representation gives as an output a numpy array, each row represents a single molecule
     """
     def __init__(self, repType):
         self.repType = repType
+        self.aa_onelettercode = ["A", "C", "D", "E", "F", "G", "H", "I", "K", "L", "M", "N", "P", "Q", "R", "S", "T", "V", "W", "Y"]
+
+        self.aa_smiles = {
+            "A": "C[C@@H](C(=O)O)N",
+            "C": "C([C@@H](C(=O)O)N)S",
+            "D": "C([C@@H](C(=O)O)N)C(=O)O",
+            "E": "C(CC(=O)O)[C@@H](C(=O)O)N",
+            "F": "C1=CC=C(C=C1)C[C@@H](C(=O)O)N",
+            "G": "C(C(=O)O)N",
+            "H": "C1=C(NC=N1)C[C@@H](C(=O)O)N",
+            "I": "CC[C@H](C)[C@@H](C(=O)O)N",
+            "K": "C(CCN)C[C@@H](C(=O)O)N",
+            "L": "CC(C)C[C@@H](C(=O)O)N",
+            "M": "CSCC[C@@H](C(=O)O)N",
+            "N": "C([C@@H](C(=O)O)N)C(=O)N",
+            "P": "C1C[C@H](NC1)C(=O)O",
+            "Q": "C(CC(=O)N)[C@@H](C(=O)O)N",
+            "R": "C(C[C@@H](C(=O)O)N)CN=C(N)N",
+            "S": "C([C@@H](C(=O)O)N)O",
+            "T": "C[C@H]([C@@H](C(=O)O)N)O",
+            "V": "CC(C)[C@@H](C(=O)O)N",
+            "W": "C1=CC=C2C(=C1)C(=CN2)C[C@@H](C(=O)O)N",
+            "Y": "C1=CC(=CC=C1C[C@@H](C(=O)O)N)O"
+        }
         self.repDict = {
             "onehot": self.OneHotRepresentation,
+            "cMBDF": self.cMBDFRepresentation,
             "SLATM": self.SLATMRepresentation,
             "SPAHM": self.SPAHMRepresentation,
             "Morgan": self.MorganFingerprints,
@@ -35,7 +63,36 @@ class RepresentationGenerator:
         one_hot = np.eye(len(unique_labels))[indices]
         return one_hot
 
-    
+    def cMBDFRepresentation(self, input_dir):
+        molsList = []
+        for fileName in os.listdir(input_dir):
+            mol = qml2.Compound(input_dir + "/" + fileName)
+            
+            with open(input_dir + "/" + fileName, 'r') as file:
+                lines = file.read().split('\n')
+                numAtoms = int(lines[0])
+            
+            subList = [mol, numAtoms]
+            molsList.append(subList)
+
+        compoundsList = [subList[0] for subList in molsList]
+        sizesList = [subList[1] for subList in molsList]
+
+        charges = [compound.nuclear_charges for compound in compoundsList]
+        coordinates = [compound.coordinates for compound in compoundsList]
+        pad = max(sizesList)
+
+        asize = get_asize(charges)
+        convs = get_convolutions()
+        repsList = []
+        print("Generating cMBDF representations: ")
+        for i in tqdm(range(len(compoundsList))):
+            rep = generate_cmbdf(charges[i], coordinates[i], convs, local=False, pad=pad, asize=asize)
+            repsList.append(rep)
+
+        A = np.row_stack(tuple(repsList))
+        return A
+
     def SLATMRepresentation(self, input_dir):
         molsList = []
         for fileName in os.listdir(input_dir):
@@ -63,13 +120,11 @@ class RepresentationGenerator:
         A = np.row_stack(tuple(repsList))
         return A
     
-    
     def SPAHMRepresentation(self, input_dir):
         reps_list = []
         
         print("Generating SPAHM representations: ")
         for fileName in tqdm(os.listdir(input_dir)):
-            print(f"fileName = {fileName}")
             mol = compound.xyz_to_mol(input_dir + '/' + fileName, 'def2-svp', charge=0, spin=0)
             rep = spahm.compute_spahm.get_spahm_representation(mol, "lb")[0, :]
             reps_list.append((rep, rep.size))
@@ -87,20 +142,19 @@ class RepresentationGenerator:
     
     
     def MorganFingerprints(self, input_dir):
-            molsList = []
-            print("Generating Morgan fingerprints: ")
-            for fileName in tqdm(os.listdir(input_dir)):
-                print(fileName)
-                mol = MolFromXYZFile(fileName)
-                molsList.append(mol)
+        molsList = []
+        print("Generating Morgan fingerprints: ")
+        for fileName in tqdm(os.listdir(input_dir)):
+            mol = MolFromSmiles(self.aa_smiles[fileName[0]])
+            mol = AddHs(mol)
+            molsList.append(mol)
 
-            fpgen = rdFingerprintGenerator.GetMorganGenerator(radius=2, fpSize=128)
-            print(molsList)
-            fpList = []
-            fpList = list(map(fpgen.GetFingerprint, molsList))
+        fpgen = rdFingerprintGenerator.GetMorganGenerator(radius=2, fpSize=128)
+        fpList = []
+        fpList = list(map(fpgen.GetFingerprint, molsList))
 
-            A = np.row_stack(tuple(fpList))
-            return A
+        A = np.row_stack(tuple(fpList))
+        return A
     
     
     def RepresentationGeneration(self, input_dir):
@@ -145,7 +199,7 @@ def RemoveRedundantFeatures(A, threshold=0.9):
 
 def GenerateRepresentation(rep_name, input_dir):
     """
-    Generates a representation ("onehot", "SLATM", "SPAHM" or "Morgan")
+    Generates a representation ("onehot", "SLATM", "SPAHM", ""cMBDF, or "Morgan")
     inputs:
         rep_name : str, name of the representation
         input_dir : directory where the .xyz files of the molecules are stored
@@ -153,8 +207,11 @@ def GenerateRepresentation(rep_name, input_dir):
         reps_cleaned_with_gap : np.array of shape (21, D_new), with the "gap representation" included
     """
     reps = RepresentationGenerator(rep_name).RepresentationGeneration(input_dir)
-    if rep_name != "Morgan" and rep_name != "onehot":
-        reps_cleaned = RemoveRedundantFeatures(RepsNormalization(reps))
+
+    if rep_name in ["SPAHM", "SLATM", "cMBDF"]:
+        reps_cleaned = RepsNormalization(reps)
+    if rep_name in ["SLATM", "cMBDF"]:
+        reps_cleaned = RemoveRedundantFeatures(reps_cleaned)
     else:
         reps_cleaned = reps
 
@@ -167,8 +224,6 @@ def GenerateRepresentation(rep_name, input_dir):
 
     return reps_cleaned_with_gap
 
-
-print(f'e.g. : GenerateRepresentation("SLATM", "3d_struct_aa_xyz") : {GenerateRepresentation("SLATM", "3d_struct_aa_xyz")}')
 
 
 
