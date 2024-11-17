@@ -1,98 +1,97 @@
-#############################
-#To create a transformer 
-#λ
-#copier de ce site et a remettre en ordre pour notre model
-#https://www.datacamp.com/tutorial/building-a-transformer-with-py-torch?dc_referrer=https%3A%2F%2Fwww.google.com%2F
-#############################
-
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
-import torch.utils.data as data
-import math
-import copy
 
-class MultiHeadAttention(nn.Module):
-    """
-    Commentaires de Jacques:
-    - Les arguments que devrait prendre cet objet sont la dimension d_k, la dimension de la représentation D, le nombre de heads num_heads, 
-    et une seed pour l'initialisation des poids du modèle
-    
-    - L'argument d_model me semble inadapté dans le contexte
-    """
-    def __init__(self, L, d, q, num_heads, seed=1):
-        """Constructor for the attention model. 
+class AttentionDCA(nn.Module):
+    def __init__(self, seq_length, num_heads, d_k, num_amino_acids=21, seed=1):
+        """Constructor of the model
         parameters :
-        L : int,sequence length
-        d : int, the dimension of the representation
-        q : int, the number of categories
-         """
+        seq_length : int, the length of the sequence we are analysing
+        num_heads : int, number of heads
+        d_k : int, the inner dimension of the model
+        num_amino_acids : int, the number of amino acids"""
+        super(AttentionDCA, self).__init__()
+        self.seq_length = seq_length
+        self.num_heads = num_heads
+        self.d_k = d_k
+        self.num_amino_acids = num_amino_acids
 
-        super(MultiHeadAttention, self).__init__()
-        
-        # Initialize dimensions
-        self.d = d # Model's dimension
-        self.num_heads = num_heads # Number of attention heads
-        self.L = L # Dimension of each head's key, query, and value
-        
-        # Linear layers for transforming inputs
-        """
-        Commentaires de Jacques:
-        - Les dimensions input et output me semblent étranges, et sont en tout cas inadaptées dans notre contexte
-        - Les poids de toutes ces matrices doivent impérativement être initialisés avec une seed pour la reproductibilité
-        - Ne pas oublier d'exprimer W_v comme une multiplication de deux matrices (D, d_k) et (d_k, D)
-        - La matrice W_o est inutile dans notre contexte
-        """
+        # Initialize Q, K, V matrices
         torch.manual_seed(seed)
-        #Q = embedding@W_q dim(embedding[i]) = (1, d) L embedding => dim Q = (L, d) selon le cours 
-        self.W_q = [nn.Parameter(d, d) for i in range(num_heads)] # Query transformation
+        # D'après chat : peut etre amélioré en utilisant une autre initialisation
+        self.Q = nn.Parameter(torch.randn(num_heads, seq_length, d_k))
+        self.K = nn.Parameter(torch.randn(num_heads, seq_length, d_k))
+        self.V = nn.Parameter(torch.randn(num_heads, num_amino_acids, num_amino_acids))
 
-        #K = embedding@W_k => dim K = (L, d)
-        self.W_k = [nn.Parameter(d, d) for i in range(num_heads)] # Key transformation
-
-        #V = embedding@W_v => (q,q) selon l'article. Selon le cours dim V = (L, Dv)
-        #W_v = W_v_up@W_v_down
-        self.W_v_up = [nn.Parameter(d, q) for i in range(num_heads)]
-        self.W_v_down = [nn.Parameter(q,d) for i in range(num_heads)] # Value transformation
-        
-        
-    def scaled_dot_product_attention(self, X, Q, K, V, mask=None):
-        """calculate the attention score and adds it to the original sample. Q, K, v can be obtained by X@W_
+    def forward(self, x):
+        """Computes the forward pass
         parameters :
-        X : tensor, 
-        samples
-        Q : tensor, 
-        query matrix
-        K : tensor, 
-        Key matrix
-        V : tensor, 
-        Value Matrix"""
+        x : tensor, the MSA that have been encoded"""
+        # x shape: (batch_size, seq_length)
+        batch_size = x.shape[0]
+
+        J = self.compute_j()
+
+        # Calculate energy
+        energy = -torch.sum(J[torch.arange(self.seq_length).unsqueeze(1), 
+                              torch.arange(self.seq_length).unsqueeze(0), 
+                              x.unsqueeze(2), 
+                              x.unsqueeze(1)], dim=(1,2))
+
+        return energy
+
+    def pseudo_likelihood(self, x):
+        # x shape: (batch_size, seq_length)
+        batch_size = x.shape[0]
+        
+        J = self.compute_j()
+
+        # Calculate pseudo-likelihood
+        pl = 0
+        for i in range(self.seq_length):
+            mask = torch.ones(self.seq_length, dtype=bool)
+            mask[i] = False
+            
+            energies = torch.sum(J[i, mask][:, x[:, mask], :], dim=1)
+            pl += torch.sum(energies[torch.arange(batch_size), x[:, i]])
+            pl -= torch.sum(torch.logsumexp(energies, dim=1))
+
+        return -pl / (batch_size * self.seq_length)
+
+    def train(self, data, num_epochs=100, lr=0.01):
+        optimizer = optim.Adam(self.parameters(), lr=lr)
+        
+        for epoch in range(num_epochs):
+            optimizer.zero_grad()
+            loss = self.pseudo_likelihood(data)
+            loss.backward()
+            optimizer.step()
+            
+            if (epoch + 1) % 10 == 0:
+                print(f'Epoch [{epoch+1}/{num_epochs}], Loss: {loss.item():.4f}')
+
+    def compute_j(self):
+        """Computes the J tensor cf equation (4)"""
+
         # Calculate attention scores
-        attn_scores = torch.matmul(Q, K.transpose(-2, -1)) / math.sqrt(self.d)
-        
-        # Apply mask if provided (useful for preventing attention to certain parts like padding)
-        if mask is not None:
-            attn_scores = attn_scores.masked_fill(mask == 0, -1e9)
-        
-        # Softmax is applied to obtain attention probabilities
-        attn_probs = torch.softmax(attn_scores, dim=-1)
-        
-        # Multiply by values to obtain the final output
-        """
-        Commentaire de Jacques:
-        - Cet output est inadapté dans le contexte
-        - Devrait rendre attn_score @ X @ V @ X.T, ou X est l'input du modèle (dimension (L, d), où L est le nombre de d'éléments de la séquence)
-        """
-        output = torch.matmul(attn_probs, V) @ X @ V @ X.T
-        return output
-        
-    def forward(self, X,mask=None):
-        """computes the attention output for a model and a sample"""
-        Q = [torch.matmul(X, self.W_q[i]) for i in range(self.num_heads)]
-        K = [torch.matmul(X, self.W_k[i]) for i in range(self.num_heads)]
-        V = [torch.matmul(torch.matmul(X, self.W_v_up[i]), self.W_v_down) for i in range(self.num_heads)]
-        
-        # Perform scaled dot-product attention
-        attn_output = self.scaled_dot_product_attention(Q, K, V, mask)
-        
-        return attn_output
+        attention_scores = [torch.matmul(self.Q[i], self.K[i].T)/self.d_k for i in range(self.num_heads)]
+        attention_probs = torch.softmax(attention_scores, dim=-1) # pas sur de cette operation
+
+        # Calculate J tensor
+        J = torch.tensor([torch.matmul(attention_probs[i], self.V[i]) for i in range(self.num_heads)])
+        J = J.sum(dim=0)  # Sum over heads
+
+        return J
+
+# Example usage
+seq_length = 100
+num_heads = 4 
+d_k = 32
+batch_size = 64
+
+# Create random data (replace with your actual MSA data)
+data = torch.randint(0, 21, (batch_size, seq_length))
+
+model = AttentionDCA(seq_length, num_heads, d_k)
+model.train(data)
