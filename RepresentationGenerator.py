@@ -110,6 +110,8 @@ class RepresentationGenerator:
 
 def RepsNormalization(A):
     """
+    Commentaire de Jacques: 21 dans ce cas ? Il ne faut pas normaliser la représentation one-hot du gap :)
+    Aussi, il faut préciser que c'est une layer normalisation (par représentation et non pas par feature)
     Normalizes the matrix of representation A
     inputs:
         A : np.array of shape (21, D)
@@ -126,6 +128,7 @@ def RepsNormalization(A):
 
 def RemoveRedundantFeatures(A, threshold=0.9):
     """
+    Commentaire de Jacques: 21 ?
     Removes redundant features of a data set
     inputs:
         A : np.array of shape (21, D)
