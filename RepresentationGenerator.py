@@ -10,11 +10,19 @@ from tqdm import tqdm
 
 class RepresentationGenerator:
     """
-    This object serves to generate a given representation for a set of molecules
-    To generate a given representation, initialize a RepresentationGenerator object (argument: "onehot", "cMBDF", "SLATM", "SPAHM", or "Morgan"), representation that is going to be generated)
-    A directory where the .xyz files are stored
-    In any case, the generation of a representation gives as an output a numpy array, each row represents a single molecule
+    This object serves to generate a given representation for the set of amino-acids.
+    To generate a given representation, initialize a RepresentationGenerator object :
+        input :
+            repType : str, representation that is going to be generated - "onehot", "cMBDF", "SLATM", "SPAHM", or "Morgan"
+    and call the RepresentationGeneration method :
+        inputs : 
+            input_dir : str, a directory where the .xyz files are stored
+        returns :
+            A : np.array of shape (20, D), each row being a representation of an amino acid
+
+    e.g. : reps_matrix = RepresentationGenerator("SLATM").RepresentationGeneration("xyz_directory")
     """
+
     def __init__(self, repType):
         self.repType = repType
         self.aa_onelettercode = ["A", "C", "D", "E", "F", "G", "H", "I", "K", "L", "M", "N", "P", "Q", "R", "S", "T", "V", "W", "Y"]
@@ -82,7 +90,6 @@ class RepresentationGenerator:
         coordinates = [compound.coordinates for compound in compoundsList]
         pad = max(sizesList)
 
-        # not sure what that does ?
         asize = get_asize(charges)
         convs = get_convolutions()
         repsList = []
@@ -121,7 +128,6 @@ class RepresentationGenerator:
         charges = [compound.nuclear_charges for compound in compoundsList]
         coordinates = [compound.coordinates for compound in compoundsList]
 
-        # not sure what that does ?
         mbtypes = get_slatm_mbtypes(charges)
         repsList = []
 
@@ -216,7 +222,6 @@ def RemoveRedundantFeatures(A, threshold=0.9):
     returns:
         A_noredundant : np.array of shape (20, D_new)
     """
-
     # calculates the correlation coefficient matrix
     corrMat = np.corrcoef(A.T)**2
 
