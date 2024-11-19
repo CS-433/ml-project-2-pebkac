@@ -248,13 +248,13 @@ def GenerateRepresentation(rep_name, input_dir):
     """
     reps = RepresentationGenerator(rep_name).RepresentationGeneration(input_dir)
 
-    if rep_name in ["SLATM", "cMBDF"]:
-        # removes redundant features from rep. matrix if rep. is "SLATM" or "cMBDF"
-        reps_cleaned = RemoveRedundantFeatures(reps)
-
     if rep_name in ["SPAHM", "SLATM", "cMBDF"]:
+        if rep_name in ["SLATM", "cMBDF"]:
+            # removes redundant features from rep. matrix if rep. is "SLATM" or "cMBDF"
+            reps = RemoveRedundantFeatures(reps)
+
         # normalizes the rep. matrix if rep. is "SPAHM", "SLATM" or "cMBDF"
-        reps_cleaned = RepsNormalization(reps_cleaned)
+        reps_cleaned = RepsNormalization(reps)
     else:
         reps_cleaned = reps
 
