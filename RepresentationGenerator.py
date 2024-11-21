@@ -68,7 +68,6 @@ class RepresentationGenerator:
         molsList = []
 
         for fileName in os.listdir(input_dir):
-
             # converts the amino acid contained in each .xyz file to a qml2.Compound object
             mol = qml2.Compound(input_dir + "/" + fileName)
             
@@ -108,7 +107,6 @@ class RepresentationGenerator:
         molsList = []
 
         for fileName in os.listdir(input_dir):
-
             # converts the amino acid contained in each .xyz file to a qml2.Compound objec
             mol = qml2.Compound(input_dir + "/" + fileName)
             
@@ -146,7 +144,6 @@ class RepresentationGenerator:
         
         print("Generating SPAHM representations: ")
         for fileName in tqdm(os.listdir(input_dir)):
-
             # converts the amino acid contained in each .xyz file to a rdkit.Chem.rdchem.Mol object
             mol = compound.xyz_to_mol(input_dir + '/' + fileName, 'def2-svp', charge=0, spin=0)
 
@@ -196,46 +193,66 @@ class RepresentationGenerator:
         # Generates the desired representation
         A = self.repDict[self.repType](input_dir)
         return A
-    
+
 
 def RepsNormalization(A):
     """
-    Normalizes each row (layer-normalization) of the representation matrix A
+    Normalizes each feature of a representation matrix A
     inputs:
-        A : np.array of shape (20, D)
+        A : np.array of shape (20, D), representation matrix
     returns:
-        A_normalized : np.array of shape (20, D)
+        A_normalized : np.array of shape (20, D), normalized representation matrix
     """
-    row_avg = A.mean(axis=1)
-    row_std = A.std(axis=1)
-    EPS_REG = 1e-10
-    A_normalized = (A - row_avg[:, np.newaxis]) / (row_std[:, np.newaxis] + EPS_REG)
+
+    row_avg = A.mean(axis=0)
+    row_std = A.std(axis=0)
+    EPS_REG = 1e-10             # regularization param to avoid ZeroDivision
+    A_normalized = (A - row_avg) / (row_std + EPS_REG)
 
     return A_normalized
 
 
-def RemoveRedundantFeatures(A, threshold=0.9):
+def RemoveRedundantFeatures(A, remove_threshold=0.9):
     """
-    Removes redundant features of a data set
+    Removes redundant and zero-variance features from a representation matrix A
     inputs:
-        A : np.array of shape (20, D)
+        A : np.array of shape (20, D), representation matrix
     returns:
-        A_noredundant : np.array of shape (20, D_new)
+        A_noRedundant : np.array of shape (20, D_new), representation matrix with no redundant features
     """
-    # calculates the correlation coefficient matrix
+
+    # calculates the correlation coefficient matrix of the resulting matrix
     corrMat = np.corrcoef(A.T)**2
 
     # retrieves only the lower triangular part of the symmetric matrix
     lowerTriangular = np.tril(corrMat, k=-1)
 
     # retrieves one index from all pairs of redundant features
-    redundantIndices = np.unique(np.nonzero(lowerTriangular > threshold)[1])
+    redundantIndices = np.unique(np.nonzero(lowerTriangular > remove_threshold)[1])
 
-    # deletes one feature from each pair of redundant feature
-    A_noredundant = np.delete(A, redundantIndices, axis=1)
+    # removes one feature from each pair of redundant feature
+    A_noRedundant = np.delete(A, redundantIndices, axis=1)
 
-    return A_noredundant
+    return A_noRedundant
 
+
+def RemoveZeroVarianceFeatures(A):
+    """
+    Removes features that are constant across all amino acids, i.e. the ones with zero variance
+    inputs :
+        A : np.array of shape (20, D), representation matrix
+    returns :
+        A_noZerovariance : np.array of shape (20, D_new), representation matrix with no zero-variance features
+    """
+
+    # calculates the variance of each feature
+    feature_std = np.std(A, axis=0)
+
+    # retrieves the indices of all zero-variance features
+    zerovarianceIndices = np.nonzero(feature_std == 0)
+
+    # removes all zero-variance features
+    A_noZerovariance = np.delete(A, zerovarianceIndices, axis=1)
 
 def GenerateRepresentation(rep_name, input_dir):
     """
@@ -246,6 +263,7 @@ def GenerateRepresentation(rep_name, input_dir):
     returns:
         reps_cleaned_with_gap : np.array of shape (21, D_new), with the "gap representation" included
     """
+    
     reps = RepresentationGenerator(rep_name).RepresentationGeneration(input_dir)
 
     if rep_name in ["SPAHM", "SLATM", "cMBDF"]:
@@ -256,7 +274,11 @@ def GenerateRepresentation(rep_name, input_dir):
         # normalizes the rep. matrix if rep. is "SPAHM", "SLATM" or "cMBDF"
         reps_cleaned = RepsNormalization(reps)
     else:
+        # does nothing for other representations
         reps_cleaned = reps
+
+    # removes features with zero variance
+    reps_cleaned = RemoveZeroVarianceFeatures(reps_cleaned)
 
     # retrieves the dimensions of the cleaned rep. matrix
     N = np.shape(reps_cleaned)[0]
