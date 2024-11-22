@@ -73,7 +73,7 @@ class AttentionDCA(nn.Module):
         - seed (int): Seed to initialize the learnable parameters
 
         Attributes:
-        - self.reps_matrix (torch.Tensor of shape (q, D)): = reps_matrix
+        - self.reps_matrix (torch.Tensor of shape (q, D)): = reps_matrix (see representation generator)
         - self.input_dim (int): Dimensionality of the representation used
         - self.num_heads (int): = num_heads
         - self.d_k (int): = d_k
