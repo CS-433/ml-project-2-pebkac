@@ -254,6 +254,8 @@ def RemoveZeroVarianceFeatures(A):
     # removes all zero-variance features
     A_noZerovariance = np.delete(A, zerovarianceIndices, axis=1)
 
+    return A_noZerovariance
+
 def GenerateRepresentation(rep_name, input_dir):
     """
     Generates a representation ("onehot", "SLATM", "SPAHM", ""cMBDF, or "Morgan")
