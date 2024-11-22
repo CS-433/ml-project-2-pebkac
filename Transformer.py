@@ -31,9 +31,11 @@ class Kernel:
             "linear": self.linear_kernel,
         }
 
-    def rbf_kernel(self, X, Y):
-        if self.gamma is None:
-            self.gamma = 1.0 / X.shape[1]
+
+    #the choice of RBF and Laplace is due to the fact that the value of the kernel increases as the value between AA decreases
+    def rbf_kernel(self, X, Y, gamma=None):
+        if gamma is None:
+            gamma = 1.0 / X.shape[1]
         
         D = torch.cdist(X, Y, p=2)
         D_squared = torch.pow(D, 2)
@@ -90,6 +92,7 @@ class AttentionDCA(nn.Module):
         self.lambda_ = lambda_
         self.kernel = Kernel(kernel_type=kernel_type, gamma=gamma)
 
+        # V_metric correspond to W see pdf
         torch.manual_seed(seed)
         self.Q = nn.Parameter(torch.randn(num_heads, seq_len, d_k))
         self.K = nn.Parameter(torch.randn(num_heads, seq_len, d_k))
