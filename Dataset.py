@@ -1,10 +1,6 @@
 ################
 #Based on the article https://stanford.edu/~shervine/blog/pytorch-how-to-generate-data-parallel
 ################
-"""
-Cet objet n'est pas super utile, utilise un objet Dataloader pytorch directement
-"""
-
 
 import torch
 
