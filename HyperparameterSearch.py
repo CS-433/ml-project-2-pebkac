@@ -7,12 +7,13 @@ import torch
 
 def objective_with_params(trial, reps_matrix, data_dict):
     """
-    Objective function that runs the transformer with different combinations of hyperparameters and returns 
-    its average loss over the cross-validation
+    Objective function that trains the AttentionDCA with different combinations of hyperparameters and returns 
+    its average testing loss over the cross-validation
 
     inputs :
         trial : optuna.trial.Trial object (automatically generated in the optuna study)
         reps_matrix : np.array of shape (21, D_rep), representations matrix
+        weights
         data_dict : dictionnary containing the weight vectors and alignment matrices of training/test sets for each fold of the cross validation
             It has the following structure (N_train/N_test is the number of sequences in the training/test set, M is the number of elements per sequence): 
             {
@@ -75,13 +76,13 @@ def objective_with_params(trial, reps_matrix, data_dict):
     for i in range(len(data_dict)):
         # Extract the training and testing MSAs from the dict
         _, Z_train = data_dict[f"{i}"]["Train"].values()
-        _, Z_test = data_dict[f"{i}"]["Test"].values()
+        weights_test, Z_test = data_dict[f"{i}"]["Test"].values()
 
         # Run the training loop to obtain the new weights
-        model_opt, weights_opt = train_model(model, Z_train, kernel_type, learning_rate, num_epochs)
+        model_opt = train_model(model, Z_train, kernel_type, learning_rate, num_epochs)
 
         # Add the testing loss of each fold 
-        losses_test += model_opt.loss(Z_test, weights_opt) 
+        losses_test += model_opt.loss(Z_test, weights_test) 
 
     # Calculate the mean testing loss and returns it
     mean_loss_test = losses_test / len(data_dict)
