@@ -5,6 +5,12 @@ from Transformer import AttentionDCA
 from train import train_model
 import torch
 
+"""
+Commentaires de Jacques:
+- Plutôt pas mal, mais les commentaires en vert donnent l'impression que ChatGPT a tout fait, c'est mieux de les enlever
+- Il faut absolument mettre une seed pour optuna, sinon nos résutats ne seront pas reproductibles
+"""
+
 def objective_with_params(trial, reps_matrix, data_dict):
     """
     Objective function that trains the AttentionDCA with different combinations of hyperparameters and returns 
