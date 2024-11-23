@@ -31,8 +31,6 @@ class Kernel:
             "linear": self.linear_kernel,
         }
 
-
-    #the choice of RBF and Laplace is due to the fact that the value of the kernel increases as the value between AA decreases
     def rbf_kernel(self, X, Y, gamma=None):
         if gamma is None:
             gamma = 1.0 / X.shape[1]
