@@ -10,7 +10,7 @@ Commentaires de Jacques:
 - Il faut absolument mettre une seed pour optuna, sinon nos résutats ne seront pas reproductibles
 """
 
-def objective_with_params(trial, reps_matrix, sub_data_dict):
+def objective_with_params(trial, reps_matrix, sub_data_dict, verbose):
     """
     Objective function that trains the AttentionDCA with different combinations of hyperparameters and returns 
     its average testing loss over the cross-validation
@@ -58,11 +58,11 @@ def objective_with_params(trial, reps_matrix, sub_data_dict):
     )
 
     # Run the training loop to optimize the model
-    _, loss_test, _ = train_model(model, sub_data_dict, kernel_type, learning_rate, num_epochs)
+    _, loss_test, _ = train_model(model, sub_data_dict, learning_rate, num_epochs, verbose)
 
     return loss_test
 
-def HyperparameterSearch(trial, reps_matrix, data_dict, seed = 10):
+def HyperparameterSearch(trial, reps_matrix, data_dict, verbose, seed = 10):
     """
     Runs the hyper-parameter search over a hyper-parameter space given in objective_with_params
     inputs :
@@ -86,7 +86,7 @@ def HyperparameterSearch(trial, reps_matrix, data_dict, seed = 10):
 
     # Define the TPE Optuna sampler and the objective function
     sampler = optuna.samplers.TPESampler(seed=seed)
-    objective = partial(objective_with_params(trial, reps_matrix, data_dict))
+    objective = partial(objective_with_params(trial, reps_matrix, data_dict, verbose))
 
     # Run the Optuna study
     study = optuna.create_study(sampler = sampler, direction="minimize")
