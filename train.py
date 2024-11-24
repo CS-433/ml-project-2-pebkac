@@ -10,7 +10,7 @@ params = {'batch_size': 1,
 'num_workers': 6}
 """
 
-def train_model(model, list_ids, file_path_training, file_path_validation, num_epoch, lr, verbose, **params):
+def train_model(model, list_ids, file_path_training, file_path_validation, num_epoch, lr, verbose, params_train, params_validation):
     """Implement a boucle d'entrainement. The model is sould be a transformer based on the one implemented in this code. 
     parameters :
         model : Transformer, the model we are training
@@ -44,14 +44,14 @@ def train_model(model, list_ids, file_path_training, file_path_validation, num_e
     training_set = Dataset(list_ids, file_path_training)
 
     # Generates the batches for the training
-    training_generator = torch.utils.data.Dataloader(training_set, **params)
+    training_generator = torch.utils.data.Dataloader(training_set, **params_train)
 
     # Generates the batches for the cross validation
     ### Not necessary if batches already made. Struggling to understand where the batches should be generated
     validation_set = Dataset(list_ids, file_path_validation)
     """Inutile, le but c'est de tester sur tout le validation set, pas sur des mini-batchs du validation set
     Réponse : on peut de toute facon faire un seul batch. Si la validation przend trop de temps on peut faire plus de batch pour parallelisation"""
-    validation_generator = torch.utils.data.DataLoader(validation_set, **params)
+    validation_generator = torch.utils.data.DataLoader(validation_set, **params_validation)
 
 
     # Sets the adam optimizer
