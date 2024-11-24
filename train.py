@@ -10,7 +10,7 @@ params = {'batch_size': 1,
 'num_workers': 6}
 """
 
-def train_model(model, list_ids, file_path_training, file_path_validation, num_epoch, lr, verbose, params_train, params_validation):
+def train_model(model, list_ids, file_path_training, file_path_validation, num_epoch, lr, verbose, params_train, params_validation, seed = 10):
     """Implement a boucle d'entrainement. The model is sould be a transformer based on the one implemented in this code. 
     parameters :
         model : Transformer, the model we are training
@@ -40,6 +40,8 @@ def train_model(model, list_ids, file_path_training, file_path_validation, num_e
     Cela est particulièrement utile pour des modèles avec des tailles d'entrée fixes, comme dans des images de taille constante ou des séquences de longueurs identiques."""
     torch.backends.cudnn.benchmark = True
     
+    torch.manual_seed(seed)
+
     # Loads the data
     training_set = Dataset(list_ids, file_path_training)
 
