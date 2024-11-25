@@ -10,7 +10,7 @@ params = {'batch_size': 1,
 'num_workers': 6}
 """
 
-def train_model(model, sub_data_dict, fold_num, num_epoch, lr, params_train, params_validation, verbose, seed = 10):
+def train_model(model, data_dict, fold_num, num_epoch, lr, params_train, params_validation, verbose, seed = 10):
     """Implement a boucle d'entrainement. The model is sould be a transformer based on the one implemented in this code. 
     parameters :
         model : Transformer, the model we are training
