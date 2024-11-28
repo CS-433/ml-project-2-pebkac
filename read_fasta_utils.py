@@ -36,7 +36,7 @@ def read_fasta(file_name, max_gap_fraction, theta, remove_dups=True, verbose=Tru
       n is the size of the ensemble of similar sequences the sequence of interest belongs to
       Meff is defined as the sum over the values of 1/n for each ensemble of similar sequences
 
-    - Zint (torch.Tensor of size (M, L)): Alignment matrix
+    - Zint (torch.Tensor of size (M, N)): Alignment matrix
       Each row of this matrix corresponds to a sequence
       Each amino acid/gap of the sequence is encoded with integers in {1, 2, ..., 20, 21}
 
@@ -155,19 +155,20 @@ def read_fasta_k_fold(file_name, k_fold, max_gap_fraction, theta, remove_dups=Tr
         raise ValueError(f"parameter q={q} is too big (max 31 is allowed)")
 
     np.random.seed(seed)
-    Z = (np.transpose(np.array(Z)))
+    Z = np.transpose(np.array(Z))
     np.random.shuffle(Z)
+    Z = np.transpose(Z)
     fold_size = N//k_fold
 
     data_dict = {}
 
     for i in range(k_fold):
         if i < k_fold - 1:
-            Z_train = np.concatenate((Z[:fold_size * i, :], Z[fold_size * (i + 1):, :]))
-            Z_test = Z[fold_size * i:fold_size * (i + 1), :].copy()
+            Z_train = np.concatenate((Z[:, :fold_size * i], Z[:, fold_size * (i + 1):]), axis=1)
+            Z_test = Z[:, fold_size * i:fold_size * (i + 1)].copy()
         else:
-            Z_train = Z[:fold_size * i, :].copy()
-            Z_test = Z[fold_size * i:, :].copy()
+            Z_train = Z[:, :fold_size * i].copy()
+            Z_test = Z[:, fold_size * i:].copy()
 
         W_train, Meff_train = jl.compute_weights(jl.convert(jl.seval("Array{Int8, 2}"), Z_train), q, theta, verbose=verbose)
         W_train = torch.tensor(W_train)
@@ -194,7 +195,7 @@ def read_fasta_k_fold(file_name, k_fold, max_gap_fraction, theta, remove_dups=Tr
 
     return data_dict
 
-def quickread_k_fold(file_name, k_fold, moreinfo=False):
+def quickread_k_fold(file_name, k_fold=5, moreinfo=False):
     """
     Reads a FASTA file and computes the alignment matrix as well as the weight of each sequence in the MSA using pre-defined parameters
     (max_gap_fraction = 0.9, theta = jl.seval(":auto"), remove_dups = True, verbose = False)
@@ -202,7 +203,7 @@ def quickread_k_fold(file_name, k_fold, moreinfo=False):
     Parameters:
     - fileName (str): The path to the FASTA file to be read.
 
-    - k_fold (int): Number of folds for the cross validation
+    - k_fold (int): Number of folds for the cross validation (default: 5)
 
     - moreinfo (bool, optional): If True, returns the number of sequences of the MSA and the sequences length,
       in addition to the alignment matrix and the weights vector (default: False)
@@ -226,8 +227,6 @@ def quickread_k_fold(file_name, k_fold, moreinfo=False):
     Raises:
     - ValueError: If the maximum state parameter q exceeds 32
     """
-    Weights, Z, N, M, _ = read_fasta_k_fold(file_name, k_fold, 0.9, jl.seval(":auto"), True, verbose=False)
+    data_dict = read_fasta_k_fold(file_name, k_fold, 0.9, jl.seval(":auto"), True, verbose=False)
     
-    if moreinfo:
-        return Weights, Z, N, M
-    return Z, Weights
+    return data_dict

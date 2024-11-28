@@ -268,6 +268,9 @@ def GenerateRepresentation(rep_name, input_dir):
     
     reps = RepresentationGenerator(rep_name).RepresentationGeneration(input_dir)
 
+    # removes features with zero variance
+    reps = RemoveZeroVarianceFeatures(reps)
+
     if rep_name in ["SPAHM", "SLATM", "cMBDF"]:
         if rep_name in ["SLATM", "cMBDF"]:
             # removes redundant features from rep. matrix if rep. is "SLATM" or "cMBDF"
@@ -278,9 +281,6 @@ def GenerateRepresentation(rep_name, input_dir):
     else:
         # does nothing for other representations
         reps_cleaned = reps
-
-    # removes features with zero variance
-    reps_cleaned = RemoveZeroVarianceFeatures(reps_cleaned)
 
     # retrieves the dimensions of the cleaned rep. matrix
     N = np.shape(reps_cleaned)[0]

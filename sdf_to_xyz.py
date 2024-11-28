@@ -2,7 +2,6 @@ import os
 import glob
 from rdkit import Chem
 
-
 aa_onelettercode = ["A",
                 "C",
                 "D",

@@ -23,21 +23,19 @@ class Kernel:
     Forward method returns:
     - K (torch.Tensor of shape (H, N, M)): Kernel matrix between the samples contained in X and Y
     """
-    def __init__(self, kernel_type, gamma=None):
+    def __init__(self, kernel_type, gamma_fact=1.0):
         self.kernel_type = kernel_type
-        self.gamma = gamma
+        self.gamma_fact = gamma_fact
         self.kernel_dict = {
             "rbf": self.rbf_kernel,
             "linear": self.linear_kernel,
         }
 
-    def rbf_kernel(self, X, Y, gamma=None):
-        if gamma is None:
-            gamma = 1.0 / X.shape[1]
-        
+    def rbf_kernel(self, X, Y):
+        gamma = self.gamma_fact/X.shape[1]
         D = torch.cdist(X, Y, p=2)
         D_squared = torch.pow(D, 2)
-        K = torch.exp(-self.gamma * D_squared)
+        K = torch.exp(-gamma * D_squared)
         return K
 
     def linear_kernel(self, X, Y):
@@ -49,7 +47,7 @@ class Kernel:
         return K
 
 class AttentionDCA(nn.Module):
-    def __init__(self, reps_matrix, seq_len, num_heads, d_k, d_v, kernel_type, gamma=None, lambda_=1e-3, seed=10):
+    def __init__(self, reps_matrix, seq_len, num_heads, d_k, d_v, kernel_type, gamma_fact=1.0, lambda_=1e-3, seed=10):
         """
         This object defines a multi-headed attention block, as well as useful methods related to it
         We define: 
@@ -66,7 +64,7 @@ class AttentionDCA(nn.Module):
         - kernel_type (str): Kernel function used to compute the value matrix from V_metric and reps_matrix
                             if kernel_type = "rbf", a RBF kernel is used 
                             if kernel_type = "linear", a linear kernel is used
-        - gamma (float): Scale parameter, only useful if kernel_type == "rbf" (default: None)
+        - gamma_fact (float): Scale parameter, only useful if kernel_type == "rbf" (default: None)
         - lambda_ (float): Regularization parameter for the loss (default: 1e-3)
         - seed (int): Seed to initialize the learnable parameters
 
@@ -88,13 +86,23 @@ class AttentionDCA(nn.Module):
         self.num_heads = num_heads
         self.d_k = d_k
         self.lambda_ = lambda_
-        self.kernel = Kernel(kernel_type=kernel_type, gamma=gamma)
+        self.kernel = Kernel(kernel_type=kernel_type, gamma_fact=gamma_fact)
 
-        # V_metric correspond to W see pdf
+        self.Q = nn.Parameter(torch.empty(num_heads, seq_len, d_k))
+        self.K = nn.Parameter(torch.empty(num_heads, seq_len, d_k))
+        self.V_metric = nn.Parameter(torch.empty(num_heads, self.input_dim, d_v))
+
         torch.manual_seed(seed)
-        self.Q = nn.Parameter(torch.randn(num_heads, seq_len, d_k))
-        self.K = nn.Parameter(torch.randn(num_heads, seq_len, d_k))
-        self.V_metric = nn.Parameter(torch.randn(num_heads, self.input_dim, d_v))
+        self.init_weights()
+
+
+    def init_weights(self):
+        """
+        Initializes the weights of the Q, K, V_metric matrices using He initialization
+        """
+        nn.init.kaiming_normal_(self.Q)
+        nn.init.kaiming_normal_(self.K)
+        nn.init.kaiming_normal_(self.V_metric)
 
     def V_aa(self):
         """
@@ -117,13 +125,14 @@ class AttentionDCA(nn.Module):
         Returns:
         - attention_map_per_head (torch.Tensor of shape (num_heads, seq_len, seq_len)): symmetrized attention map for each head
         """
-        attention_scores = torch.matmul(self.Q, self.K.transpose(-2, -1))/(self.d_k ** 0.5)
+        attention_scores = torch.matmul(self.Q, self.K.transpose(-2, -1))
 
         if mask is not None:
             attention_scores = attention_scores.masked_fill(mask == 0, float("-inf"))
 
         attention_probs = F.softmax(attention_scores, dim=-1)
-        attention_map_per_head = 0.5 * (attention_probs + attention_probs.transpose(-2, -1))
+        # attention_map_per_head = 0.5 * (attention_probs + attention_probs.transpose(-2, -1))
+        attention_map_per_head = attention_probs
         return attention_map_per_head
     
     def attention_map(self, mask=None):
@@ -156,32 +165,25 @@ class AttentionDCA(nn.Module):
         Returns:
         - total_loss(torch.Tensor, float scalar): The total loss of the model for the dataset characterized by Z and weights
         """
-
         attention_map_per_head = self.attention_map_per_head(mask=mask)
         V_aa = self.V_aa()
 
-        # Compute the J tensor
-        J = torch.einsum('hij,hqa->ijqa', attention_map_per_head, V_aa)  
-        mask = ~torch.eye(J.shape[0], dtype=bool, device=J.device).unsqueeze(-1).unsqueeze(-1) 
+        J = torch.einsum('hij,hqa->ijqa', attention_map_per_head, V_aa)
+        mask = ~torch.eye(J.shape[0], dtype=bool, device=J.device).unsqueeze(-1).unsqueeze(-1)
         J = J * mask
 
         L, M = Z.shape
         q = V_aa.shape[1]
 
-        # Compute energy_matrix using one-hot encoding for efficient indexing
-        Z_one_hot = F.one_hot(Z, num_classes=q).permute(2, 0, 1).float()
-        energy_matrix = torch.einsum('rja,qlm->qrm', J, Z_one_hot) 
-        lge = torch.logsumexp(energy_matrix, dim=0) 
+        Z_one_hot = F.one_hot(Z - 1, num_classes=q).float()
+        energy_matrix = torch.einsum('rjaq,jmq->arm', J, Z_one_hot)
+        lge = torch.logsumexp(energy_matrix, dim=0)
 
-        # Computes the pseudo-likelihood (pl)
-        Z_indices = Z.flatten()
-        energy_matrix_flat = energy_matrix.view(q, -1)
-        energy_matrix_correct = energy_matrix_flat[Z_indices, torch.arange(L * M)].view(L, M)
-        pl = weights * (energy_matrix_correct - lge).sum(dim=0)
+        obs_energy_matrix = torch.einsum('qrm,rmq->rm', energy_matrix, Z_one_hot)
+
+        pl = weights.flatten() * torch.sum(obs_energy_matrix - lge, 0)
         pl = -pl.sum()
 
-        # Computes the regularization term (reg)
         reg = self.lambda_ * torch.sum(J**2)
-
         total_loss = pl + reg
         return total_loss

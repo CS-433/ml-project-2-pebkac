@@ -35,7 +35,7 @@ def correct_APC(S):
     S_corrected = S - (Sj @ Si) / Sa
     return S_corrected
 
-def compute_ranking(S, min_dist=6):
+def compute_ranking(S, min_dist=6, device=torch.device("cuda")):
     """
     Extracts sorted residue pairs contact scores from a contact score matrix
 
@@ -44,13 +44,15 @@ def compute_ranking(S, min_dist=6):
 
     - min_dist (int): distance in the chain above which the contact between two residues is considered non-trivial (default: min_dist=6)
 
+    - device (torch.device object): Device where the matrices needed for this function are stored (default: torch.device("cuda"))
+
     Returns:
     - sorted_scores (torch.Tensor of shape (number of residue pairs, 3)):
         Each row has the form (i, j, score), where score is the contact score of pair (i, j)
         The tensor is sorted in descending order with respect to the scores
     """
     N = S.shape[0] 
-    i_indices, j_indices = torch.triu_indices(N, N, min_dist)
+    i_indices, j_indices = torch.triu_indices(N, N, min_dist).to(device)
     scores = S[j_indices, i_indices]
     scores = torch.stack([i_indices, j_indices, scores], dim=1)
     sorted_indices = torch.argsort(scores[:, -1], descending=True)
@@ -75,7 +77,8 @@ def score(model, min_dist=6, mask=None):
     """
     attention_map_per_head = model.attention_map_per_head(mask=mask)
     V_aa = model.V_aa()
-    J = torch.einsum('hij,hqa->ijqa', attention_map_per_head, V_aa)  
+    J = torch.einsum('hij,hqa->ijqa', attention_map_per_head, V_aa) 
+    J = 0.5 * (J + J.permute(1, 0, 3, 2))
 
     frob_matrix = compute_fn(J)
     corrected_frob_matrix = correct_APC(frob_matrix)
@@ -98,14 +101,14 @@ def compute_residue_pair_dist(filedist):
 
     i_indices = d[:, 0].long()
     j_indices = d[:, 1].long()
-    distances = d[:, -1]
+    distances = d[:, -1].float()
     max_index = max(i_indices.max().item(), j_indices.max().item()) + 1
     dist_tensor = torch.full((max_index, max_index), float('inf'))
     dist_tensor[i_indices, j_indices] = distances
 
     return dist_tensor
 
-def compute_referencescore(score, dist, min_dist=6, cutoff=8.0):
+def compute_referencescore(score, dist, min_dist=6, cutoff=8.0, device=torch.device("cuda")):
     """
     Compares the scores of residue pairs (i, j) to their distance,
     and computes a reference score enabling to evaluate the ability of the score
@@ -119,6 +122,8 @@ def compute_referencescore(score, dist, min_dist=6, cutoff=8.0):
     - min_dist (int): distance in the chain above which the contact between two residues is considered non-trivial (default: min_dist=6)
 
     - cutoff (float): distance in space (in Angstrom) under which two residues are considered to be in contact (default: cutoff=8.0)
+
+    - device (torch.device object): Device where the matrices needed for this function are stored (default: torch.device("cuda"))
 
     Returns:
     - ref_score (torch.Tensor of shape (number of residue pairs, 4)): 
@@ -136,7 +141,7 @@ def compute_referencescore(score, dist, min_dist=6, cutoff=8.0):
     site_j = score[:, 1].long()
     plm_score = score[:, 2]
 
-    d_ij = dist[site_i, site_j]
+    d_ij = dist.to(device)[site_i, site_j]
     valid_mask = (site_j - site_i >= min_dist) & (d_ij != float('inf'))
 
     site_i = site_i[valid_mask]
@@ -145,7 +150,7 @@ def compute_referencescore(score, dist, min_dist=6, cutoff=8.0):
     d_ij = d_ij[valid_mask]
 
     is_below_cutoff = (d_ij < cutoff).cumsum(dim=0).to(torch.float32)
-    ctr_tot = torch.arange(1, len(site_i) + 1, dtype=torch.float32)
+    ctr_tot = torch.arange(1, len(site_i) + 1, dtype=torch.float32).to(device)
     ratio = is_below_cutoff/ctr_tot
 
     ref_score = torch.stack([site_i, site_j, plm_score, ratio], dim=1)
@@ -167,7 +172,7 @@ def compute_PPV(sorted_scores, filedist, min_separation=6):
     - PPV_curve (torch.Tensor of shape (num residue pairs,)): PPV curve associated to the contact score predictions
     """
     dist = compute_residue_pair_dist(filedist)
-    referencescore = compute_referencescore(sorted_scores, dist, mindist=min_separation)
+    referencescore = compute_referencescore(sorted_scores, dist, min_dist=min_separation)
     PPV_curve = referencescore[:, 3]
     return PPV_curve
 
