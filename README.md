@@ -46,7 +46,7 @@ WARNING: The `qstack` package only works with UNIX-based operating systems. To b
 3. representation_generator.py: Provides the functions used to generate and pre-process molecular representations of amino-acids
 
 # Shell scripts
-1. sdf_to_xyz.sh: Generates XYZ files from SDF files in a 3d_struct_aa_sdf and stores them in 3d_struct_aa_xyz
+1. sdf_to_xyz.sh: Generates XYZ files from SDF files in 3d_struct_aa_sdf and stores them in 3d_struct_aa_xyz
 2. find_hyperparams.sh: Performs hyperparameter optimization for each representation on the PF00014 MSA, and stores the optimal hyperparameters in best_hyperparams.json
 
 WARNING: It is not required to run these scripts, as the 3d_struct_aa_xyz directory and the best_hyperparams.json file are given
