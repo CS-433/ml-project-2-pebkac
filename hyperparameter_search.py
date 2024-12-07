@@ -1,15 +1,12 @@
+"""
+This script defines the functions used for hyperparameter optimization
+"""
+
 from functools import partial
 import optuna
 import torch
-from Transformer import AttentionDCA
+from AttentionDCA import AttentionDCA
 from train import train_model
-
-"""
-Commentaires de Jacques:
-- Plutôt pas mal, mais les commentaires en vert donnent l'impression que ChatGPT a tout fait, c'est mieux de les enlever
-    j'en ai laissé pour la clarté, dis-moi si tu penses que ça fait trop encore -tim
-- Il faut absolument mettre une seed pour optuna, sinon nos résutats ne seront pas reproductibles
-"""
 
 def objective_with_params(trial, reps_matrix, data_dict, struct_file, verbose=False, seed=10):
     """
@@ -47,8 +44,8 @@ def objective_with_params(trial, reps_matrix, data_dict, struct_file, verbose=Fa
     kernel_type = "rbf"
     gamma_fact = trial.suggest_float("gamma_fact", 1e-1, 10, log=True)
     lambda_ = trial.suggest_float("lambda_", 1e-5, 1e-1, log=True)
-    lr = trial.suggest_float("lr", 1e-4, 1e-1, log=True)   
-    num_epochs = 150
+    lr = trial.suggest_float("lr", 1e-4, 1e-1, log=True)  
+    num_epochs = trial.suggest_int("num_epochs", 100, 200, step=25) 
 
     seq_len = data_dict["Z"].shape[0]
     reps_matrix = torch.tensor(reps_matrix, dtype=torch.float32)
@@ -88,12 +85,13 @@ def HyperparameterSearch(reps_matrix, data_dict, struct_file, verbose=False, see
     """
 
     # Define the TPE Optuna sampler and the objective function
+    params_list = []
     sampler = optuna.samplers.TPESampler(seed=seed)
-    objective = partial(objective_with_params, reps_matrix=reps_matrix, data_dict=data_dict, struct_file=struct_file, verbose=verbose)
 
-    # Run the Optuna study
+    objective = partial(objective_with_params, reps_matrix=reps_matrix, data_dict=data_dict, struct_file=struct_file, verbose=verbose)
     study = optuna.create_study(sampler=sampler, direction="minimize")
-    study.optimize(objective, n_trials=100, timeout=7200)
-    best_params = study.best_params
+    study.optimize(objective, n_trials=200, timeout=10800)
+    best_trial = study.best_trial
+    best_params = best_trial.params
 
     return best_params

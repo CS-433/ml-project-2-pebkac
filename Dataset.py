@@ -1,6 +1,6 @@
-################
-#Based on the article https://stanford.edu/~shervine/blog/pytorch-how-to-generate-data-parallel
-################
+"""
+This script defines a Dataset object, which is used in the training phase
+"""
 
 import torch
 

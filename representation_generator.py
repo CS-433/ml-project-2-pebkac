@@ -1,3 +1,7 @@
+"""
+This script defines the objects and functions used to generate and pre-process the molecular representations of each amino-acid
+"""
+
 import os
 import numpy as np
 import qml2
@@ -206,7 +210,7 @@ def RepsNormalization(A):
 
     row_avg = A.mean(axis=0)
     row_std = A.std(axis=0)
-    EPS_REG = 1e-10             # regularization param to avoid ZeroDivision
+    EPS_REG = 1e-10             
     A_normalized = (A - row_avg) / (row_std + EPS_REG)
 
     return A_normalized
@@ -221,18 +225,10 @@ def RemoveRedundantFeatures(A, remove_threshold=0.9):
         A_noRedundant : np.array of shape (20, D_new), representation matrix with no redundant features
     """
 
-    # calculates the correlation coefficient matrix of the resulting matrix
     corrMat = np.corrcoef(A.T)**2
-
-    # retrieves only the lower triangular part of the symmetric matrix
     lowerTriangular = np.tril(corrMat, k=-1)
-
-    # retrieves one index from all pairs of redundant features
     redundantIndices = np.unique(np.nonzero(lowerTriangular > remove_threshold)[1])
-
-    # removes one feature from each pair of redundant feature
     A_noRedundant = np.delete(A, redundantIndices, axis=1)
-
     return A_noRedundant
 
 
@@ -245,15 +241,9 @@ def RemoveZeroVarianceFeatures(A):
         A_noZerovariance : np.array of shape (20, D_new), representation matrix with no zero-variance features
     """
 
-    # calculates the variance of each feature
     feature_std = np.std(A, axis=0)
-
-    # retrieves the indices of all zero-variance features
     zerovarianceIndices = np.nonzero(feature_std == 0)
-
-    # removes all zero-variance features
     A_noZerovariance = np.delete(A, zerovarianceIndices, axis=1)
-
     return A_noZerovariance
 
 def GenerateRepresentation(rep_name, input_dir):
@@ -267,27 +257,19 @@ def GenerateRepresentation(rep_name, input_dir):
     """
     
     reps = RepresentationGenerator(rep_name).RepresentationGeneration(input_dir)
-
-    # removes features with zero variance
     reps = RemoveZeroVarianceFeatures(reps)
 
     if rep_name in ["SPAHM", "SLATM", "cMBDF"]:
         if rep_name in ["SLATM", "cMBDF"]:
-            # removes redundant features from rep. matrix if rep. is "SLATM" or "cMBDF"
             reps = RemoveRedundantFeatures(reps)
 
-        # normalizes the rep. matrix if rep. is "SPAHM", "SLATM" or "cMBDF"
         reps_cleaned = RepsNormalization(reps)
     else:
-        # does nothing for other representations
         reps_cleaned = reps
 
-    # retrieves the dimensions of the cleaned rep. matrix
     N = np.shape(reps_cleaned)[0]
     D_new = np.shape(reps_cleaned)[1]
 
-    # adds a row that represents the "gap" and a feature that takes values 0 for 
-    # all amino acids and 1 for the "gap"
     reps_cleaned_with_gap = np.zeros((N+1, D_new+1))
     reps_cleaned_with_gap[:N, :D_new] = reps_cleaned
     reps_cleaned_with_gap[-1, -1] = 1

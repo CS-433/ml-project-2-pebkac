@@ -1,3 +1,7 @@
+"""
+This script defines the function used to train the model
+"""
+
 import torch
 import torch.optim as optim
 import torch.utils.data

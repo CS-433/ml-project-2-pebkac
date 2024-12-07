@@ -1,3 +1,7 @@
+"""
+This script defines the multi-headed transformer model
+"""
+
 import numpy as np
 import torch
 import torch.nn as nn
