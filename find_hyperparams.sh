@@ -5,8 +5,8 @@
 script="python find_hyperparams.py"
 
 reps=("onehot" "SLATM" "cMBDF" "SPAHM" "Morgan")
-fasta_file="PF00014.fasta"
-struct_file="PF00014_struct.dat"
+fasta_file="data/PF00014.fasta"
+struct_file="data/PF00014_struct.dat"
 xyz_dir="3d_struct_aa_xyz"
 verbose="0"
 

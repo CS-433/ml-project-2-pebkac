@@ -5,9 +5,9 @@ This script defines the function used to train the model
 import torch
 import torch.optim as optim
 import torch.utils.data
-from Dataset import Dataset
+from Model.Dataset import Dataset
 from tqdm import tqdm 
-from ppv_curve_utils import score, compute_PPV
+from Utils.ppv_curve_utils import score, compute_PPV
 
 def train_model(model, data_dict, struct_file, num_epoch, lr, dataloader_params, verbose=False, seed=10):
     """

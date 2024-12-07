@@ -3,9 +3,9 @@ This script performs the hyperparameter optimisation of the model for a given MS
 The best hyperparameters are stored in best_hyperparams.json
 """
 
-from read_fasta_utils import quickread
+from Utils.read_fasta_utils import quickread
 from representation_generator import GenerateRepresentation
-from hyperparameter_search import HyperparameterSearch
+from Model.hyperparameter_search import HyperparameterSearch
 import sys
 import json
 
