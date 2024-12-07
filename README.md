@@ -13,6 +13,6 @@ python -m pip install juliacall
 python -m pip install "qstack[all] @ git+https://github.com/lcmd-epfl/Q-stack.git"
 python -m pip install "qml2 @ git+https://github.com/qml2code/qml2.git"
 ```
-
+WARNING: The `qstack` package only works with UNIX-based operating systems. To build this environment with Windows, using WSL is required
 
 
