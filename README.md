@@ -1,4 +1,9 @@
 [![Review Assignment Due Date](https://classroom.github.com/assets/deadline-readme-button-22041afd0340ce965d47ae6ef1cefeee28c7c493a6346c4f15d667ab976d596c.svg)](https://classroom.github.com/a/UDdkOEMs)
+# Project description
+In the original article presenting the [AttentionDCA](https://www.biorxiv.org/content/10.1101/2024.02.06.579080v2.abstract) model, it is shown that a multi-headed attention-block can be used for the Direct Coupling Analysis (DCA) of Multiple Sequence Alignments (MSA) of families of small proteins.
+
+The goal of this project is to modify this multi-headed attention-block in order to include chemical information about the different amino-acids in the form of molecular representations. With these modifications, learning the value matrices is turned into a metric learning task. The resulting metric matrices of each head of the attention-block can then be used to analyze the importance of each feature in the molecular representation used.
+
 # Creating the Conda environment
 A conda environment containing the required conda packages can be created as follows:
 ```
