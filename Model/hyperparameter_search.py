@@ -6,7 +6,7 @@ from functools import partial
 import optuna
 import torch
 from Model.AttentionDCA import AttentionDCA
-from train import train_model
+from Model.train import train_model
 
 def objective_with_params(trial, reps_matrix, data_dict, struct_file, verbose=False, seed=10):
     """

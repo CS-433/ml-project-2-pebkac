@@ -4,12 +4,12 @@ The best hyperparameters are stored in best_hyperparams.json
 """
 
 from Utils.read_fasta_utils import quickread
-from representation_generator import GenerateRepresentation
+from Utils.representation_generator import GenerateRepresentation
 from Model.hyperparameter_search import HyperparameterSearch
 import sys
 import json
 
-if len(sys.argv) != 5:
+if len(sys.argv) != 6:
     raise ValueError("Molecular representation, fasta file, structure file, directory where xyz files are stored and verbose/not verbose must be specified")
 
 rep_name = sys.argv[1]
