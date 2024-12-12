@@ -85,7 +85,6 @@ def HyperparameterSearch(reps_matrix, data_dict, struct_file, verbose=False, see
     """
 
     # Define the TPE Optuna sampler and the objective function
-    params_list = []
     sampler = optuna.samplers.TPESampler(seed=seed)
 
     objective = partial(objective_with_params, reps_matrix=reps_matrix, data_dict=data_dict, struct_file=struct_file, verbose=verbose)
