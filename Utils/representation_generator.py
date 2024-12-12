@@ -218,7 +218,7 @@ def RepsNormalization(A):
 
 def RemoveRedundantFeatures(A, remove_threshold=0.9):
     """
-    Removes redundant and zero-variance features from a representation matrix A
+    Removes redundant features from a representation matrix A
     inputs:
         A : np.array of shape (20, D), representation matrix
     returns:
