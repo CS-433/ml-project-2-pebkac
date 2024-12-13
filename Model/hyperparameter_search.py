@@ -30,12 +30,6 @@ def objective_with_params(trial, reps_matrix, data_dict, struct_file, verbose=Fa
     returns :
         mean_loss_test : float, average testing loss over the cross-validation
     """
-    # Definition of dataloader parameters
-    dataloader_params = {
-        "batch_size": 100,
-        "shuffle": True,
-        "num_workers": 10,
-    }
 
     # Suggest hyperparameters :
     num_heads = trial.suggest_int("num_heads", 64, 256, step=16)
@@ -51,6 +45,13 @@ def objective_with_params(trial, reps_matrix, data_dict, struct_file, verbose=Fa
     reps_matrix = torch.tensor(reps_matrix, dtype=torch.float32)
     if torch.cuda.is_available():
         reps_matrix = reps_matrix.to(torch.device("cuda"))
+
+    # Definition of dataloader parameters
+    dataloader_params = {
+        "batch_size": data_dict["Z"].shape[1]//40,
+        "shuffle": True,
+        "num_workers": 10,
+    }
 
     # Initialize model
     model = AttentionDCA(

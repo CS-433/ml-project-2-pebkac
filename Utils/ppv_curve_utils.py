@@ -1,6 +1,8 @@
 import torch
 import numpy as np
 
+device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
+
 def compute_fn(J):
     """
     Computes the Frobenius score for each pair of residues in the sequence
@@ -35,7 +37,7 @@ def correct_APC(S):
     S_corrected = S - (Sj @ Si) / Sa
     return S_corrected
 
-def compute_ranking(S, min_dist=6, device=torch.device("cuda")):
+def compute_ranking(S, min_dist=6, device=device):
     """
     Extracts sorted residue pairs contact scores from a contact score matrix
 
@@ -44,7 +46,7 @@ def compute_ranking(S, min_dist=6, device=torch.device("cuda")):
 
     - min_dist (int): distance in the chain above which the contact between two residues is considered non-trivial (default: min_dist=6)
 
-    - device (torch.device object): Device where the matrices needed for this function are stored (default: torch.device("cuda"))
+    - device (torch.device object): Device where the matrices needed for this function are stored 
 
     Returns:
     - sorted_scores (torch.Tensor of shape (number of residue pairs, 3)):
@@ -108,7 +110,7 @@ def compute_residue_pair_dist(filedist):
 
     return dist_tensor
 
-def compute_referencescore(score, dist, min_dist=6, cutoff=8.0, device=torch.device("cuda")):
+def compute_referencescore(score, dist, min_dist=6, cutoff=8.0, device=device):
     """
     Compares the scores of residue pairs (i, j) to their distance,
     and computes a reference score enabling to evaluate the ability of the score
@@ -123,7 +125,7 @@ def compute_referencescore(score, dist, min_dist=6, cutoff=8.0, device=torch.dev
 
     - cutoff (float): distance in space (in Angstrom) under which two residues are considered to be in contact (default: cutoff=8.0)
 
-    - device (torch.device object): Device where the matrices needed for this function are stored (default: torch.device("cuda"))
+    - device (torch.device object): Device where the matrices needed for this function are stored 
 
     Returns:
     - ref_score (torch.Tensor of shape (number of residue pairs, 4)): 
@@ -192,7 +194,8 @@ def compute_actualPPV(filedist, cutoff=8.0, min_dist=6):
     Returns:
     - actual_PPV_curve (torch.Tensor of shape (num residue pairs,)): PPV curve associated to the actual distances between residues
     """
-    distances = torch.tensor(torch.loadtxt(filedist))
+    distances = np.loadtxt(filedist)
+    distances = torch.tensor(distances, dtype=torch.float32)
     
     residue_i = distances[:, 0].long()
     residue_j = distances[:, 1].long()
