@@ -33,6 +33,7 @@ WARNING: The `qstack` package only works with UNIX-based operating systems. To b
 # Python scripts
 1. sdf_to_xyz.py: Generates XYZ files from SDF files in a given input directory and stores them in a given output directory
 2. find_hyperparams.py: Performs hyperparameter optimization for a given MSA and a given representation
+3. model_analysis.ipynb: Trains a multi-headed attention block for each representation, generates PPV curves for each representation, and extracts feature importance for one-hot encodings and SPAHM representations
 ## Model
 1. AttentionDCA.py: Defines the structure of the multi-headed attention-block
 2. Dataset.py: Defines the Dataset object used during model training for mini-batching
@@ -53,6 +54,9 @@ WARNING: It is not required to run these scripts, as the 3d_struct_aa_xyz direct
 # Data directories
 1. 3d_struct_aa_sdf: Contains the SDF files corresponding to the different amino-acids
 2. 3d_struct_aa_xyz: Contains the XYZ files corresponding to the different amino-acids
+
+# Plots
+The plots used for the analysis of the models' performance are in the plots directory
 
 # JSON files:
 1. best_hyperparams.json: Contains the optimal hyperparameters of the multi-headed attention block for each representation when trained on the PF00014 MSA
