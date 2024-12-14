@@ -55,8 +55,8 @@ WARNING: It is not required to run these scripts, as the 3d_struct_aa_xyz direct
 1. 3d_struct_aa_sdf: Contains the SDF files corresponding to the different amino-acids
 2. 3d_struct_aa_xyz: Contains the XYZ files corresponding to the different amino-acids
 
-# Plots
-The plots used for the analysis of the models' performance are in the plots directory
-
 # JSON files:
 1. best_hyperparams.json: Contains the optimal hyperparameters of the multi-headed attention block for each representation when trained on the PF00014 MSA
+
+# Plots
+The plots used for the analysis of the models' performance are in the plots directory
