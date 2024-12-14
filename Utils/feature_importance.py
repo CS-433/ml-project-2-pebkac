@@ -1,7 +1,21 @@
+"""
+This script defines the function used to eaxtract feature importance from a multi-headed attention block
+"""
+
 import numpy as np
 import torch
 
 def get_feature_importance(model):
+    """
+    This function extracts feature importance from a multi-headed attention block
+    
+    Takes as arguments:
+    - model (AttentionDCA object defined in Model.AttentionDCA.py): Multi-headed attention block
+    
+    Returns:
+    - mean_feat_importance (np.array of shape (N_features,): Mean feature importance scores across heads of the attention block
+    - std_feat_importance (np.array of shape (N_features,): Standard deviation on feature importance scores across heads of the attention block
+    """
     W = model.V_metric.cpu().detach()
     A = torch.matmul(W, W.transpose(-2, -1))
     A_list = [A[i, :, :] for i in range(A.shape[0])]
