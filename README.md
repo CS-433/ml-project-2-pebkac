@@ -9,7 +9,7 @@ The different molecular representations used for this project are one-hot encodi
 # Creating the Conda environment
 A conda environment containing the required conda packages can be created as follows:
 ```
-conda env create -f environment.yml
+conda env create -f requirements.txt
 ```
 
 # Installing pip dependencies
