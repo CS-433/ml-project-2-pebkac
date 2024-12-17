@@ -32,8 +32,8 @@ WARNING: The `qstack` package only works with UNIX-based operating systems. To b
 
 # Python scripts
 1. sdf_to_xyz.py: Generates XYZ files from SDF files in a given input directory and stores them in a given output directory
-2. find_hyperparams.py: Performs hyperparameter optimization for a given MSA and a given representation
-3. model_analysis.ipynb: Trains a multi-headed attention block for each representation, generates PPV curves for each representation, and extracts feature importance for one-hot encodings and SPAHM representations
+2. find_hyperparams.py: Performs hyperparameter optimization for a given MSA and a given representation. Feature pre-processing is performed by this script prior to hyperparameter optimization
+3. model_analysis.ipynb: Trains a multi-headed attention block for each representation with the optimized hyperparameters after pre-processing the features, generates PPV curves for each representation, and extracts feature importance for one-hot encodings and SPAHM representations
 ## Model
 1. AttentionDCA.py: Defines the structure of the multi-headed attention-block
 2. Dataset.py: Defines the Dataset object used during model training for mini-batching
