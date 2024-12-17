@@ -53,6 +53,7 @@ WARNING: It is not required to run these scripts, as the 3d_struct_aa_xyz direct
 # Data directories
 1. 3d_struct_aa_sdf: Contains the SDF files corresponding to the different amino-acids
 2. 3d_struct_aa_xyz: Contains the XYZ files corresponding to the different amino-acids
+3. data: Contains the MSA of interest (PF00014.fasta) and the associated structure (PF00014_struct.dat)
 
 # JSON files:
 1. best_hyperparams.json: Contains the optimal hyperparameters of the multi-headed attention block for each representation when trained on the PF00014 MSA
