@@ -11,7 +11,6 @@ A conda environment containing the required conda packages can be created as fol
 ```
 conda env create -f environment.yml
 ```
-Note: The file `environment.yml` will likely be updated during the project
 
 # Installing pip dependencies
 The scripts additionally require to install packages via pip. To install these packages, execute the following commands from the `ml-project-2-pebkac` environment:
