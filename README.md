@@ -7,9 +7,10 @@ The goal of this project is to modify this multi-headed attention-block in order
 The different molecular representations used for this project are one-hot encodings, [SPAHM](https://pubs.rsc.org/en/content/articlehtml/2022/dd/d1dd00050k#cit53), [MBDF](https://pubs.aip.org/aip/jcp/article/159/3/034106/2902959), [SLATM](https://arxiv.org/abs/1807.04259) and [Morgan](https://www.rdkit.org/UGM/2012/Landrum_RDKit_UGM.Fingerprints.Final.pptx.pdf) representations.
 
 # Creating the Conda environment
-A conda environment containing the required conda packages can be created as follows:
+A conda environment containing the required conda packages can be created and activated as follows:
 ```
 conda env create -f requirements.txt
+conda activate ml-project-2-pebkac
 ```
 
 # Installing pip dependencies
