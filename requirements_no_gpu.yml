@@ -1,0 +1,17 @@
+name: ml-project-2-pebkac
+channels:
+  - pytorch
+  - defaults
+  - conda-forge
+  - https://repo.anaconda.com/pkgs/main
+  - https://repo.anaconda.com/pkgs/r
+dependencies:
+  - ipykernel
+  - juliaup
+  - python=3.12
+  - pytorch
+  - rdkit
+  - torchaudio
+  - torchvision
+  - optuna
+  - tqdm
