@@ -9,7 +9,12 @@ The different molecular representations used for this project are one-hot encodi
 # Creating the Conda environment
 A conda environment containing the required conda packages can be created and activated as follows:
 ```
-conda env create -f requirements.txt
+conda env create -f requirements.yml
+conda activate ml-project-2-pebkac
+```
+If no GPU is available, a conda environment containing the required conda packages can be created and activated as follows:
+```
+conda env create -f requirements_no_gpu.yml
 conda activate ml-project-2-pebkac
 ```
 
